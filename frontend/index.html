@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Modern Search Engine</title>
+</head>
+<body>
+  <h1 id="header">Lade Überschrift...</h1>
+
+  <script>
+    fetch("http://localhost:5050/api/index/header")
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("header").innerText = data.text;
+      });
+  </script>
+</body>
+</html>
