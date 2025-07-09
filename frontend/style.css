@@ -1,51 +1,71 @@
+/* === Basislayout === */
 body {
   margin: 0;
-  padding: 0;
   background-color: #202124;
   font-family: 'Roboto', sans-serif;
-  color: white;
-  height: 100vh;
+  color: #e8eaed;
+}
+
+/* === Header: Top-Bar mit 3 Bereichen === */
+.header {
+  width: 100%;
+  background-color: #202124;
+  border-bottom: 1px solid #3c4043;
+  padding: 12px 24px;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Header-Bereiche */
+.header-left,
+.header-center,
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-center {
+  flex: 2;
   justify-content: center;
-  align-items: center;
 }
 
-.center-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.header-right {
+  flex: 1;
+  justify-content: flex-end;
 }
 
+/* === Logo === */
 .logo {
-  font-size: 92px;
+  font-size: 24px;
   font-weight: bold;
-  margin-bottom: 40px;
+  text-decoration: none;
+  color: white;
 }
 
 .logo .red {
   color: #ea4335;
 }
 
+/* === Suchfeld === */
 .search-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   width: 100%;
-}
-
-.search-box {
+  max-width: 600px;
   display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: 580px;
   background-color: #303134;
   border: 1px solid #5f6368;
   border-radius: 24px;
-  padding: 10px 20px;
-  margin-bottom: 30px;
+  padding: 6px 16px;
 }
 
-.search-box input {
+.search-form input {
   flex: 1;
   background: transparent;
   border: none;
@@ -54,21 +74,55 @@ body {
   color: white;
 }
 
-.buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.buttons button {
-  background-color: #303134;
+.search-form button {
+  background-color: transparent;
+  border: none;
   color: white;
-  border: 1px solid #5f6368;
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-size: 14px;
   cursor: pointer;
+  font-size: 14px;
 }
 
-.buttons button:hover {
-  background-color: #3c4043;
+.search-form button:hover {
+  text-decoration: underline;
+}
+
+/* === Ergebnisliste === */
+.main-content {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.result {
+  margin-bottom: 32px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.result:hover {
+  background-color: #303134;
+}
+
+.result .url {
+  font-size: 14px;
+  color: #bdc1c6;
+}
+
+.result .title {
+  font-size: 20px;
+  color: #8ab4f8;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.result .title:hover {
+  text-decoration: underline;
+}
+
+.result .snippet {
+  font-size: 14px;
+  color: #e8eaed;
+  margin-top: 6px;
 }
