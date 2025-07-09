@@ -1,21 +1,22 @@
-version: "3.9"
-
 services:
   backend:
-    build: ./backend
+    build: ./backend                
     ports:
-      - "5050:5050"
+      - "5050:5050"                      
+    volumes:
+      - ./backend:/app                  
+      - ./backend/data:/app/data        
     networks:
       - searchnet
 
   frontend:
-    image: nginx:alpine
+    image: nginx:alpine        
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend:/usr/share/nginx/html:ro  
     ports:
-      - "8080:80"
+      - "8080:80"                        
     depends_on:
-      - backend
+      - backend                         
     networks:
       - searchnet
 

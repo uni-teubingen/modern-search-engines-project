@@ -1,18 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Modern Search Engine</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TüBing</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+
+  <!-- Eigenes CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1 id="header">Lade Überschrift...</h1>
+  <div class="center-container">
+    <div class="logo">
+      <span class="red">Tü</span><span>Bing</span>
+    </div>
+
+    <form class="search-form" onsubmit="return handleSearch(event)">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Suche..." />
+      </div>
+
+      <div class="buttons">
+        <button type="submit">TüBing-Suche</button>
+        <button type="button" onclick="alert('TüBing ist neugierig 😎')">Auf gut Glück!</button>
+      </div>
+    </form>
+  </div>
 
   <script>
-    fetch("http://localhost:5050/api/index/header")
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById("header").innerText = data.text;
-      });
   </script>
 </body>
 </html>
