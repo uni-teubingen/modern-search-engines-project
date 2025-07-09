@@ -7,12 +7,7 @@ SEED_URLS = [
     "https://www.tuebingen.de/",
     "https://www.tuebingen.de/tourismus",
     "https://www.tourismus-tuebingen.de/",
-    "https://www.tuebingen.de/1530.html",
-    "https://www.tuebingen.de/1579.html",
-    "https://www.schloss-tuebingen.de/",
-    "https://www.tuebingen.de/1457.html",
     "https://www.tuebingen-info.de/gastronomie",
-    "https://www.verkehrsverein-tuebingen.de/"
 ]
 
 def init_db():
