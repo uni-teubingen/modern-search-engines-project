@@ -7,10 +7,6 @@ from tokenization import tokenize
 from db import DB_PATH
 import warnings
 
-#Add a document to the index. You need (at least) two parameters:
-	#doc: The document to be indexed.
-	#index: The location of the local index storing the discovered documents.
-
 
 # Return the entire textual content of a webpage saved in the db via its id
 # @parm id : int
@@ -49,10 +45,13 @@ def add_tokens_to_db(id, tokens):
 # @param id : int
 # return None
 def index(id):
-    #TODO: Implement me
+    # Get Raw textual content as an unparsed String
 	RAW_CONTENT = retrieve_content_by_id(id)
+	#Just there for potential errors
 	if RAW_CONTENT is None:
 		warnings.warn('Page with id : ' + str(id) + " does not have any content")
 		return None
+	# Tokenize content to get library with terms and their frequencies
 	TOKENIZED_CONTENT = tokenize(RAW_CONTENT)
+	# Update the DB to include the term frequencies of the new documents
 	add_tokens_to_db(id, TOKENIZED_CONTENT)
