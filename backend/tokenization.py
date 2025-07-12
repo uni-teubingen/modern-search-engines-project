@@ -15,7 +15,7 @@ def tokenize(text):
             continue
         lemmatized_token = token.lemma.casefold()
 
-        if(len(lemmatized_token) == 1): #or not lemmatized_token.isalpha()
+        if(len(lemmatized_token) == 1 or not lemmatized_token.isalpha()):
             continue
 
         tokens[lemmatized_token] = tokens.get(lemmatized_token, 0) + 1
