@@ -30,9 +30,9 @@ def add_tokens_to_db(id, tokens):
 		cursor = conn.cursor()
 		# Add nonexistent tokens to the DB
 		cursor.execute(f"PRAGMA table_info({table});")
-		exisitng_tokens = {row[1] for row in cursor.fetchall()}
+		existing_tokens = {row[1] for row in cursor.fetchall()}
 		for token in tokens:
-			if token not in exisitng_tokens:
+			if token not in existing_tokens:
 				cursor.execute(f"ALTER TABLE {table} ADD COLUMN {token} INTEGER DEFAULT 0;")
 		# Add Values to DB (Parsing a single command to save runtime)
 		update_token = ", ".join(f"{token} = ?" for token in tokens)
@@ -55,3 +55,32 @@ def index(id):
 	TOKENIZED_CONTENT = tokenize(RAW_CONTENT)
 	# Update the DB to include the term frequencies of the new documents
 	add_tokens_to_db(id, TOKENIZED_CONTENT)
+
+
+# Create a df-table in the database, including all tokenized terms within every document in the database
+# @param None
+# return None
+def create_dfs_table():
+	table_tfs = "tfs"
+	table_dfs = "dfs"
+	with sqlite3.connect(DB_PATH) as conn:
+		cursor = conn.cursor()
+		# Get Total number of indexed documents
+		indexed_documents = cursor.execute(f"SELECT COUNT (*) FROM {table_tfs}").fetchone()[0]
+		# Fetch all Terms out of the tf-table in the database
+		cursor.execute(f"PRAGMA table_info({table_tfs});")
+		terms_and_id = cursor.fetchall()
+		terms = [row[1] for row in terms_and_id[1:]]
+		# Calculate DFs (Parsing a single command to save runtime)
+		df_seperated = []
+		for term in terms:
+			df_part = (f"SUM(CASE WHEN) {term} <> 0 THEN 1 ELSE 0 END * 1.0 / {indexed_documents} AS {term}")
+			df_seperated.append(df_part)
+			dfs_select = ("SELECT" + ", ".join(df_seperated) + f" FROM {table_tfs}")
+		dfs = cursor.execute(dfs_select).fetchone()
+		# (Re)Initialize dfs-table
+		cursor.execute(f"DROP TABLE IF EXISTS {table_dfs};")
+		term_command = " ,".join(f"{term}" for term in terms)
+		cursor.execute(f"CREATE TABLE {table_dfs} ({term_command});")
+		placeholder_symbols = " ,".join("?" for _ in terms)
+		cursor.execute(f"INSERT INTO {table_dfs} VALUES ({placeholder_symbols})", dfs)
