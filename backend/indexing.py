@@ -10,7 +10,7 @@ import warnings
 
 # Return the entire textual content of a webpage saved in the db via its id
 # @parm id : int
-# return content : String
+# return String
 def retrieve_content_by_id(id):
 	table = "pages"
 	with sqlite3.connect(DB_PATH) as conn:
