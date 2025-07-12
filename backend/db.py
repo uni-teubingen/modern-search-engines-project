@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_PATH = "data/search.db"
+DB_PATH = "backend/data/search.db"
 
 SEED_URLS = [
     "https://www.tuebingen.de/",
@@ -25,5 +25,6 @@ def init_db():
             crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    print("[✅] Datenbank initialisiert:", DB_PATH)
     conn.commit()
     conn.close()

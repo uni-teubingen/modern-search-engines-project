@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
+from crawler import crawl as start_crawl
+import threading
 
 app = Flask(__name__)
 CORS(app)
@@ -28,5 +30,11 @@ def search():
     ]
 
     return jsonify(dummy_results)
+
+@app.route("/api/start-crawling", methods=["GET","POST"])
+def start_crawling():
+    thread = threading.Thread(target=start_crawl)
+    thread.start()
+    return jsonify({"status": "Crawling started"}), 202
 
 app.run(host="0.0.0.0", port=5050)
