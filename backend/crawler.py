@@ -99,9 +99,9 @@ def crawl():
                 href = link_tag["href"]
                 full_url = urljoin(url, href)
                 domain = tldextract.extract(full_url).domain
-                if domain and ALLOWED_DOMAIN in domain.lower():
-                    if full_url not in seen:
-                        frontier.append(full_url)
+                #if domain and ALLOWED_DOMAIN in domain.lower():
+                if full_url not in seen:
+                    frontier.append(full_url)
 
             # Sprache prüfen (per Wortvergleich)
             if not is_english(text):

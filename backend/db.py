@@ -4,10 +4,11 @@ import os
 DB_PATH = "backend/data/search.db"
 
 SEED_URLS = [
-    "https://www.tuebingen.de/",
-    "https://www.tuebingen.de/tourismus",
-    "https://www.tourismus-tuebingen.de/",
-    "https://www.tuebingen-info.de/gastronomie",
+    "https://www.uni-tuebingen.de/en",
+    "https://www.germany.travel/en/cities-culture/tuebingen.html",
+    "https://www.expatrio.com/about-germany/eberhard-karls-universitat-tubingen",
+    "https://en.wikipedia.org/wiki/Tübingen",
+    "https://historicgermany.travel/historic-germany/tubingen/",
 ]
 
 def init_db():
