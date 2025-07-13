@@ -25,6 +25,11 @@ def init_db():
             crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tfs (
+            idxid INTEGER PRIMARY KEY,
+        );
+    """)
     print("[✅] Datenbank initialisiert:", DB_PATH)
     conn.commit()
     conn.close()
