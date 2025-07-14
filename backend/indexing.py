@@ -1,9 +1,7 @@
 from tokenization import tokenize
 import sqlite3
-import os
 from tokenization import tokenize
-from db import DB_PATH, get_all_documents,get_page_metadata,reset_tfs_table,insert_tfidf
-import warnings
+import db
 import math
 from collections import Counter
 # # 1. Web Crawling & Indexing
@@ -118,7 +116,7 @@ def calculate_idf(term_doc_freq, total_docs):
     return idf_result
 
 def compute_and_store_tfidf():
-    documents = get_all_documents()
+    documents = db.get_all_documents()
     total_docs = len(documents)
     all_tokens = {}
     for doc in documents:
@@ -131,23 +129,22 @@ def compute_and_store_tfidf():
     
     idf_values = calculate_idf(term_doc_freq, total_docs)
 
-    reset_tfs_table()
+    db.reset_tfs_table()
 
     for doc_id, tokens in all_tokens.items():
         tf_values = calculate_tf(tokens)
         for term, tf in tf_values.items():
             idf = idf_values[term]
             tfidf = tf * idf
-            insert_tfidf(doc_id, term, tf, idf, tfidf)
+            db.insert_tfidf(doc_id, term, tf, idf, tfidf)
 
     print("TF-IDF-Index erfolgreich erstellt.")
 
-# --- Suche ---
 def search(query, top_k=100):
     terms = tokenize(query)
     term_placeholders = ",".join(["?"] * len(terms))
 
-    with sqlite3.connect(DB_PATH) as conn:
+    with sqlite3.connect(db.DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -164,7 +161,7 @@ def search(query, top_k=100):
 
         results = []
         for row in ranked_docs:
-            meta = get_page_metadata(row["doc_id"])
+            meta = db.get_page_metadata(row["doc_id"])
             results.append({
                 "doc_id": row["doc_id"],
                 "title": meta["title"] if meta else "",
