@@ -48,7 +48,7 @@ def is_english(text):
     if len(words) == 0:
         return False
     match_count = sum(1 for w in words if w in ENGLISH_WORDS)
-    return match_count / len(words) > 0.90  # mind. 90 % englische Wörter
+    return match_count / len(words) > 0.10  # mind. 10 % englische Wörter
 
 def already_crawled(url, conn):
     cursor = conn.cursor()
