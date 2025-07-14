@@ -95,7 +95,6 @@ from collections import Counter
 
 
 
-# --- TF-IDF Berechnung ---
 def calculate_document_frequencies(all_tokens):
     df = {}
     for tokens in all_tokens.values():
@@ -106,17 +105,30 @@ def calculate_document_frequencies(all_tokens):
 def calculate_tf(tokens):
     total_terms = len(tokens)
     tf_counter = Counter(tokens)
-    return {term: count / total_terms for term, count in tf_counter.items()}
+
+    tf_result = {}
+    for term, count in tf_counter.items():
+        tf_result[term] = count / total_terms 
+    return tf_result
 
 def calculate_idf(term_doc_freq, total_docs):
-    return {term: math.log(total_docs / df) for term, df in term_doc_freq.items()}
+    idf_result = {}
+    for term, df in term_doc_freq.items():
+        idf_result[term] = math.log(total_docs / df)
+    return idf_result
 
 def compute_and_store_tfidf():
     documents = get_all_documents()
     total_docs = len(documents)
-
-    all_tokens = {doc["id"]: tokenize(doc["content"]) for doc in documents}
+    all_tokens = {}
+    for doc in documents:
+        doc_id = doc["id"]
+        content = doc["content"]
+        tokens = tokenize(content)
+        all_tokens[doc_id] = tokens
+        
     term_doc_freq = calculate_document_frequencies(all_tokens)
+    
     idf_values = calculate_idf(term_doc_freq, total_docs)
 
     reset_tfs_table()

@@ -11,7 +11,7 @@ CORS(app)
 @app.route("/api/search", methods=["GET"])
 def search():
     query = request.args.get("q", "")
-    indexing.search(query)
+    result = indexing.search(query)
     dummy_results = [
         {
             "title": f"Ergebnis 1 zu '{query}'",
@@ -29,7 +29,7 @@ def search():
             "snippet": "Besuchen Sie das Schloss Hohentübingen und genießen Sie die Aussicht."
         }
     ]
-    return jsonify(dummy_results)
+    return jsonify(result)
 
 @app.route("/api/start-crawling", methods=["GET","POST"])
 def start_crawling():

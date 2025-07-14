@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import random
-DB_PATH = "data/search.db"
+DB_PATH = "backend/data/search.db"
 
 SEED_URLS = [
     "https://www.germany.travel/en/cities-culture/tuebingen.html",
@@ -111,3 +111,82 @@ def drop_all_tables():
     conn.commit()
     conn.close()
     print("Alle Tabellen erfolgreich gelöscht.")
+
+
+
+stadt_themen = [
+    "Tübingen", "Universität", "Neckar", "Altstadt", "Stocherkahn", "Schloss", "Botanischer Garten"
+]
+
+aktivitaeten = [
+    "spazieren", "studieren", "essen", "feiern", "lesen", "shoppen", "sport machen"
+]
+
+stimmungen = [
+    "wunderschön", "interessant", "entspannt", "lebendig", "historisch", "modern", "grün"
+]
+
+def insert_varied_dummy_documents(n=100):
+    os.makedirs("data", exist_ok=True)
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT UNIQUE,
+            title TEXT,
+            content TEXT,
+            crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
+    for i in range(n):
+        stadt = random.choice(stadt_themen)
+        aktion = random.choice(aktivitaeten)
+        stimmung = random.choice(stimmungen)
+
+        url = f"https://example.com/{i}"
+        title = f"Besuch in {stadt}"
+        content = f"{stadt} ist eine {stimmung} Stadt. Man kann dort {aktion}. Es lohnt sich, {stadt} zu besuchen!"
+
+        try:
+            cursor.execute("""
+                INSERT OR IGNORE INTO pages (url, title, content)
+                VALUES (?, ?, ?)
+            """, (url, title, content))
+        except Exception as e:
+            print(f"Fehler bei Insert für {url}: {e}")
+
+    conn.commit()
+    conn.close()
+    print(f"{n} variable Dummy-Dokumente erfolgreich eingefügt.")
+
+
+
+def print_all_pages():
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT * FROM pages")
+            rows = cursor.fetchall()
+
+            if not rows:
+                print("⚠️  Keine Einträge in der 'pages'-Tabelle gefunden.")
+                return
+
+            print(f"📄 {len(rows)} Einträge in 'pages':\n")
+
+            for row in rows:
+                print(f"[id={row['id']}]")
+                print(f"  URL     : {row['url']}")
+                print(f"  Titel   : {row['title']}")
+                print(f"  Inhalt  : {row['content'][:200]}...")  # nur Ausschnitt für Übersicht
+                print(f"  Zeitpunkt: {row['crawled_at']}")
+                print("-" * 60)
+
+    except sqlite3.Error as e:
+        print("❌ Fehler beim Lesen der Datenbank:", e)
