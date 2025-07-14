@@ -125,6 +125,3 @@ def crawl():
 
     conn.close()
     print("✅ Crawling abgeschlossen.")
-
-if __name__ == "__main__":
-    crawl()
