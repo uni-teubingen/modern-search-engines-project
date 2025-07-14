@@ -4,6 +4,8 @@ import os
 from tokenization import tokenize
 from db import DB_PATH, get_all_documents,get_page_metadata,reset_tfs_table,insert_tfidf
 import warnings
+import math
+from collections import Counter
 # # 1. Web Crawling & Indexing
 # #Crawl the web to discover **English content related to Tübingen**. The crawled content should be stored locally. 
 # #If interrupted, your crawler should be able to re-start and pick up the crawling process at any time.
