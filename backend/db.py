@@ -4,10 +4,11 @@ import os
 DB_PATH = "backend/data/search.db"
 
 SEED_URLS = [
-    "https://www.tuebingen.de/",
-    "https://www.tuebingen.de/tourismus",
-    "https://www.tourismus-tuebingen.de/",
-    "https://www.tuebingen-info.de/gastronomie",
+    "https://www.germany.travel/en/cities-culture/tuebingen.html",
+    "https://www.expatrio.com/about-germany/eberhard-karls-universitat-tubingen",
+    "https://en.wikipedia.org/wiki/Tübingen",
+    "https://historicgermany.travel/historic-germany/tubingen/",
+    "https://uni-tuebingen.de/en"
 ]
 
 def init_db():
@@ -25,11 +26,47 @@ def init_db():
             crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     """)
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tfs (
-            idxid INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY,
+            doc_id INTEGER,
+            term TEXT,
+            tf REAL,
+            idf REAL,
+            tfidf REAL,
+            FOREIGN KEY (doc_id) REFERENCES pages(id)
         );
     """)
     print("[✅] Datenbank initialisiert:", DB_PATH)
     conn.commit()
     conn.close()
+
+def get_all_documents():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, content FROM pages")
+        return cursor.fetchall()
+
+def get_page_metadata(doc_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT title, url FROM pages WHERE id = ?", (doc_id,))
+        return cursor.fetchone()
+
+def reset_tfs_table():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tfs")
+        conn.commit()
+
+def insert_tfidf(doc_id, term, tf, idf, tfidf):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO tfs (doc_id, term, tf, idf, tfidf)
+            VALUES (?, ?, ?, ?, ?)
+        """, (doc_id, term, tf, idf, tfidf))
+        conn.commit()
