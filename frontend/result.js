@@ -113,12 +113,27 @@ function createSpeechBubble(){
 }
 
 /**
- * Kommentiert die Suche
+ * Bestimmt die passende Stimmung von Palmer
+ */
+function determineStateOfHappiness(emotion){
+  const wrapper = document.getElementById('assistantWrapper');
+  const upper_jaw = document.createElement('img');
+  upper_jaw.id = 'assistantImgUpper';
+  upper_jaw.className = 'assistant-img animate';
+  upper_jaw.alt ='Palmer-AI-Assistant';
+  upper_jaw.width='200px';
+  upper_jaw.src = `assets/img/assistant_upper_${emotion}.png`;
+  wrapper.appendChild(upper_jaw);
+}
+
+/**
+ * Kommentiert die Suche & Initialisiert die Stimmung
  */
 function commentSearchQuery(){
   const query = getQueryParam("q");
   const query_lower = query.toLowerCase();
   if (query_lower.includes('car')) {
+    determineStateOfHappiness('angry');
     var new_query = query_lower.replace('car', 'bicycle');
     var print_query = query_lower.replace('car', '<b>bicycle</b>');
     while(new_query.includes('car')){
@@ -130,10 +145,12 @@ function commentSearchQuery(){
     bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${new_query}><i>${print_query}</i></a>?`
   }
   else if (true) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
+    determineStateOfHappiness('sad');
     createSpeechBubble();
     const bubble = document.getElementById('speechBubble');
     bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${query}%20Boris%20Palmer><i>${query} <b>Boris Palmer</b></i> </a>?`
   } else {
+    determineStateOfHappiness('happy');
     createSpeechBubble();
     const bubble = document.getElementById('speechBubble');
     bubble.innerHTML = "I like these results. Keep up the good searching!"
