@@ -101,19 +101,42 @@ function playRandomSound(){
   const audio = new Audio(`/assets/audio/${random}.mp3`);
   audio.play().catch(err => console.warn("Autoplay disabled:", err));
 }
+/**
+ * Erstellt eine Sprechblase
+ */
+function createSpeechBubble(){
+  const wrapper = document.getElementById('assistantWrapper');
+  const bubble = document.createElement('div');
+  bubble.id = 'speechBubble';
+  bubble.className = 'speech-bubble';
+  wrapper.appendChild(bubble); 
+}
 
 /**
  * Kommentiert die Suche
  */
 function commentSearchQuery(){
-  if (true) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
-    const query = getQueryParam("q");
-    const wrapper = document.getElementById('assistantWrapper');
-    const bubble = document.createElement('div');
-    bubble.id = 'speechBubble';
-    bubble.className = 'speech-bubble';
-    bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${query}%20Boris%20Palmer>${query} <i><b>Boris Palmer</b></i> </a>?`
-    wrapper.appendChild(bubble);  
+  const query = getQueryParam("q");
+  const query_lower = query.toLowerCase();
+  if (query_lower.includes('car')) {
+    var new_query = query_lower.replace('car', 'bicycle');
+    var print_query = query_lower.replace('car', '<b>bicycle</b>');
+    while(new_query.includes('car')){
+      new_query = new_query.replace('car', 'bicycle');
+      var print_query = print_query.replace('car', '<b>bicycle</b>');
+    }
+    createSpeechBubble();
+    const bubble = document.getElementById('speechBubble');
+    bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${new_query}><i>${print_query}</i></a>?`
+  }
+  else if (true) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
+    createSpeechBubble();
+    const bubble = document.getElementById('speechBubble');
+    bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${query}%20Boris%20Palmer><i>${query} <b>Boris Palmer</b></i> </a>?`
+  } else {
+    createSpeechBubble();
+    const bubble = document.getElementById('speechBubble');
+    bubble.innerHTML = "I like these results. Keep up the good searching!"
   }
 }
 
@@ -122,9 +145,9 @@ function commentSearchQuery(){
  * Initialisiere den Palmer-AI-Assistant
  */
 function initAssistant(){
+  commentSearchQuery();
   animateAssistant();
   playRandomSound();
-  commentSearchQuery();
 }
 
 
