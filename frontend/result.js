@@ -106,7 +106,15 @@ function playRandomSound(){
  * Kommentiert die Suche
  */
 function commentSearchQuery(){
-  // TODO
+  if (true) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
+    const query = getQueryParam("q");
+    const wrapper = document.getElementById('assistantWrapper');
+    const bubble = document.createElement('div');
+    bubble.id = 'speechBubble';
+    bubble.className = 'speech-bubble';
+    bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${query}%20Boris%20Palmer>${query} <i><b>Boris Palmer</b></i> </a>?`
+    wrapper.appendChild(bubble);  
+  }
 }
 
 
@@ -116,6 +124,7 @@ function commentSearchQuery(){
 function initAssistant(){
   animateAssistant();
   playRandomSound();
+  commentSearchQuery();
 }
 
 
