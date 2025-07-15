@@ -80,8 +80,45 @@ function initSearchFormHandler() {
   }
 }
 
+// Palmer-AI-Assistant:
+
+/**
+ * Fügt Animation zu Assisten hinzu
+ */
+function animateAssistant() {
+  const img = document.getElementById("assistantImg");
+  if (img) {
+    img.classList.add("animate");
+  }
+}
+
+/**
+ * Spielt zufällig einen Spruch ab
+ */
+
+function playRandomSound(){
+  // TODO
+}
+
+/**
+ * Kommentiert die Suche
+ */
+function commentSearchQuery(){
+  // TODO
+}
+
+
+/**
+ * Initialisiere den Palmer-AI-Assistant
+ */
+function initAssistant(){
+  animateAssistant();
+}
+
+
 // Seite initialisieren
 window.addEventListener("DOMContentLoaded", () => {
   initSearchPage();
   initSearchFormHandler();
+  initAssistant();
 });
