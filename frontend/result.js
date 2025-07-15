@@ -93,11 +93,13 @@ function animateAssistant() {
 }
 
 /**
- * Spielt zufällig einen Spruch ab
+ * Spielt zufällig einen Spruch ab (Vorab muss Autoplay im Browser aktiviert werden)
  */
 
 function playRandomSound(){
-  // TODO
+  const random = Math.floor(Math.random() * 2) + 1;
+  const audio = new Audio(`/assets/audio/${random}.mp3`);
+  audio.play().catch(err => console.warn("Autoplay disabled:", err));
 }
 
 /**
@@ -113,6 +115,7 @@ function commentSearchQuery(){
  */
 function initAssistant(){
   animateAssistant();
+  playRandomSound()
 }
 
 
