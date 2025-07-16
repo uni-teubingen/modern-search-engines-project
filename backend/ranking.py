@@ -31,8 +31,13 @@ def mean_variance_score(vec):
     return mean - variance  # Portfolio Theory
 
 def retrieve(query, index_path=db.DB_PATH):
+    print(f"[Ranking] Query: '{query}'")
+
     tokens = list(tokenize(query).keys())
+    print(f"[Ranking] Tokenized Query: {tokens}")
+
     if not tokens:
+        print("[Ranking] No tokens, empty list.")
         return []
 
     tfidf_data = defaultdict(dict)
@@ -41,7 +46,6 @@ def retrieve(query, index_path=db.DB_PATH):
     with sqlite3.connect(index_path) as conn:
         cursor = conn.cursor()
 
-        # TF-IDF from DB
         cursor.execute(f"""
             SELECT doc_id, term, tfidf
             FROM tfs
@@ -50,7 +54,6 @@ def retrieve(query, index_path=db.DB_PATH):
         for doc_id, term, tfidf in cursor.fetchall():
             tfidf_data[doc_id][term] = tfidf
 
-        # IDF for query vectors
         cursor.execute(f"""
             SELECT term, idf
             FROM tfs
@@ -59,14 +62,13 @@ def retrieve(query, index_path=db.DB_PATH):
         """, tokens)
         idf_dict = {term: idf for term, idf in cursor.fetchall()}
 
-    # Query vector
     query_tf = {term: 1 / len(tokens) for term in tokens}
     query_vec = {term: query_tf[term] * idf_dict.get(term, 0) for term in tokens}
 
-    # MMR + Mean-Variance
-    lambda_param = 0.5
-    alpha_param = 0.5
+    lambda_param = 0.5  # 0 diversity <-> 1 relevance
+    alpha_param = 0.5 # mean variance score
     selected = []
+    selected_scores = {}
     candidates = list(tfidf_data.keys())
 
     for _ in range(min(100, len(candidates))):
@@ -93,7 +95,11 @@ def retrieve(query, index_path=db.DB_PATH):
 
         if best_doc:
             selected.append(best_doc)
+            selected_scores[best_doc] = best_score
             candidates.remove(best_doc)
+            meta = db.get_page_metadata(best_doc)
+            title = meta["title"] if meta else "Unknown Title"
+            print(f"[Ranking] Doc {best_doc} ('{title}') with Score {best_score:.4f}")
 
     results = []
     for doc_id in selected:
@@ -103,7 +109,7 @@ def retrieve(query, index_path=db.DB_PATH):
                 "doc_id": doc_id,
                 "title": meta["title"],
                 "url": meta["url"],
-                "score": 0
+                "score": selected_scores.get(doc_id, 0)
             })
 
     return results

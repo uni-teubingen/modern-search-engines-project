@@ -8,7 +8,7 @@ import time
 from db import DB_PATH, SEED_URLS, init_db
 
 ALLOWED_DOMAIN = "tuebingen"
-MAX_PAGES = 100
+MAX_PAGES = 300
 USER_AGENT = "TüBingCrawler/1.0"  # Eigenen User-Agent definieren
 
 # Cache für robots.txt-Parser

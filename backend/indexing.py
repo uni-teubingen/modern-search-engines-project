@@ -120,11 +120,17 @@ def compute_and_store_tfidf():
     documents = db.get_all_documents()
     total_docs = len(documents)
     all_tokens = {}
-    for doc in documents:
+
+    print(f"[Indexing] TF-IDF for {total_docs} documents...")
+
+    for i, doc in documents:
         doc_id = doc["id"]
         content = doc["content"]
         tokens = tokenize(content)
         all_tokens[doc_id] = tokens
+
+        if i % 10 == 0 or i == total_docs:
+            print(f"[Indexing] Document {i}/{total_docs} (Doc-ID: {doc_id})")
 
     term_doc_freq = calculate_document_frequencies(all_tokens)
     idf_values = calculate_idf(term_doc_freq, total_docs)
