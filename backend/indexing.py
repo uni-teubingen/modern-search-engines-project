@@ -125,21 +125,41 @@ def compute_and_store_tfidf():
         content = doc["content"]
         tokens = tokenize(content)
         all_tokens[doc_id] = tokens
-        
+
     term_doc_freq = calculate_document_frequencies(all_tokens)
-    
     idf_values = calculate_idf(term_doc_freq, total_docs)
 
     db.reset_tfs_table()
 
+    batch_inserts = []
     for doc_id, tokens in all_tokens.items():
         tf_values = calculate_tf(tokens)
         for term, tf in tf_values.items():
             idf = idf_values[term]
             tfidf = tf * idf
-            db.insert_tfidf(doc_id, term, tf, idf, tfidf)
+            batch_inserts.append((doc_id, term, tf, idf, tfidf))
 
-    print("TF-IDF-Index erfolgreich erstellt.")
+    # Batch Insert, faster performance
+    with sqlite3.connect(db.DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tfs (
+                id INTEGER PRIMARY KEY,
+                doc_id INTEGER,
+                term TEXT,
+                tf REAL,
+                idf REAL,
+                tfidf REAL,
+                FOREIGN KEY (doc_id) REFERENCES pages(id)
+            );
+        """)
+        cursor.execute("BEGIN TRANSACTION;")
+        cursor.executemany("""
+            INSERT INTO tfs (doc_id, term, tf, idf, tfidf) VALUES (?, ?, ?, ?, ?)
+        """, batch_inserts)
+        cursor.execute("COMMIT;")
+
+    print("TF-IDF-Index created and saved")
 
 def search(query, top_k=100):
     results = retrieve(query)

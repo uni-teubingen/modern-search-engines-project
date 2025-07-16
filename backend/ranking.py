@@ -28,7 +28,7 @@ def mean_variance_score(vec):
     values = list(vec.values())
     mean = sum(values) / len(values)
     variance = sum((v - mean) ** 2 for v in values) / len(values)
-    return mean - variance  # Portfolio Theory style!
+    return mean - variance  # Portfolio Theory
 
 def retrieve(query, index_path=db.DB_PATH):
     tokens = list(tokenize(query).keys())
@@ -41,7 +41,7 @@ def retrieve(query, index_path=db.DB_PATH):
     with sqlite3.connect(index_path) as conn:
         cursor = conn.cursor()
 
-        # Hole TF-IDF-Werte aus DB
+        # TF-IDF from DB
         cursor.execute(f"""
             SELECT doc_id, term, tfidf
             FROM tfs
@@ -50,7 +50,7 @@ def retrieve(query, index_path=db.DB_PATH):
         for doc_id, term, tfidf in cursor.fetchall():
             tfidf_data[doc_id][term] = tfidf
 
-        # IDF-Werte für Query-Vektor
+        # IDF for query vectors
         cursor.execute(f"""
             SELECT term, idf
             FROM tfs
@@ -59,11 +59,11 @@ def retrieve(query, index_path=db.DB_PATH):
         """, tokens)
         idf_dict = {term: idf for term, idf in cursor.fetchall()}
 
-    # Query-Vektor
+    # Query vector
     query_tf = {term: 1 / len(tokens) for term in tokens}
     query_vec = {term: query_tf[term] * idf_dict.get(term, 0) for term in tokens}
 
-    # MMR + Mean-Variance Kombi
+    # MMR + Mean-Variance
     lambda_param = 0.5
     alpha_param = 0.5
     selected = []
@@ -95,7 +95,6 @@ def retrieve(query, index_path=db.DB_PATH):
             selected.append(best_doc)
             candidates.remove(best_doc)
 
-    # Metadaten zurückgeben
     results = []
     for doc_id in selected:
         meta = db.get_page_metadata(doc_id)
@@ -104,7 +103,7 @@ def retrieve(query, index_path=db.DB_PATH):
                 "doc_id": doc_id,
                 "title": meta["title"],
                 "url": meta["url"],
-                "score": 0  # Optional: best_score oder mv_score
+                "score": 0
             })
 
     return results
