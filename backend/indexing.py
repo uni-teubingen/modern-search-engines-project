@@ -4,6 +4,7 @@ from tokenization import tokenize
 import db
 import math
 from collections import Counter
+from ranking import retrieve
 # # 1. Web Crawling & Indexing
 # #Crawl the web to discover **English content related to Tübingen**. The crawled content should be stored locally. 
 # #If interrupted, your crawler should be able to re-start and pick up the crawling process at any time.
@@ -141,32 +142,5 @@ def compute_and_store_tfidf():
     print("TF-IDF-Index erfolgreich erstellt.")
 
 def search(query, top_k=100):
-    terms = tokenize(query)
-    term_placeholders = ",".join(["?"] * len(terms))
-
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-
-        cursor.execute(f"""
-            SELECT doc_id, SUM(tfidf) AS score
-            FROM tfs
-            WHERE term IN ({term_placeholders})
-            GROUP BY doc_id
-            ORDER BY score DESC
-            LIMIT ?
-        """, (*terms, top_k))
-
-        ranked_docs = cursor.fetchall()
-
-        results = []
-        for row in ranked_docs:
-            meta = db.get_page_metadata(row["doc_id"])
-            results.append({
-                "doc_id": row["doc_id"],
-                "title": meta["title"] if meta else "",
-                "url": meta["url"] if meta else "",
-                "score": row["score"]
-            })
-
-        return results
+    results = retrieve(query)
+    return results[:top_k]
