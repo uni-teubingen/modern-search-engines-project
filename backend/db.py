@@ -11,6 +11,9 @@ SEED_URLS = [
     "https://www.expatrio.com/about-germany/eberhard-karls-universitat-tubingen",
     "https://en.wikipedia.org/wiki/Tübingen",
     "https://historicgermany.travel/historic-germany/tubingen/",
+    "https://www.mygermanyvacation.com/best-things-to-do-and-see-in-tubingen-germany/",
+    "https://visit-tubingen.co.uk/",
+    "http://britannica.com/place/Tubingen-Germany",
     #"https://uni-tuebingen.de/en"
 
 ]
