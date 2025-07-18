@@ -1,14 +1,18 @@
 import sqlite3
 import os
-import random
-DB_PATH = "backend/data/search.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "search.db")
 
 SEED_URLS = [
+    "https://uni-tuebingen.de/en/international/study-in-tuebingen/"
+    "https://www.tripadvisor.com/Restaurants-g198539-Tubingen_Baden_Wurttemberg.html"
+    "https://www.happycow.net/europe/germany/tubingen/"
+    "https://www.studying-in-germany.org/tubingen/"
     "https://www.germany.travel/en/cities-culture/tuebingen.html",
     "https://www.expatrio.com/about-germany/eberhard-karls-universitat-tubingen",
     "https://en.wikipedia.org/wiki/Tübingen",
     "https://historicgermany.travel/historic-germany/tubingen/",
-    "https://uni-tuebingen.de/en"
+    #"https://uni-tuebingen.de/en"
+
 ]
 
 def init_db():
