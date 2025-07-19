@@ -168,5 +168,36 @@ def compute_and_store_tfidf():
     print("TF-IDF-Index created and saved")
 
 def search(query, top_k=100):
-    results = retrieve(query)
-    return results[:top_k]
+    terms = tokenize(query)
+    term_placeholders = ",".join(["?"] * len(terms))
+
+    with sqlite3.connect(db.DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(f"""
+            SELECT doc_id, SUM(tfidf) AS score
+            FROM tfs
+            WHERE term IN ({term_placeholders})
+            GROUP BY doc_id
+            ORDER BY score DESC
+            LIMIT ?
+        """, (*terms, top_k))
+
+        ranked_docs = cursor.fetchall()
+
+        results = []
+        for row in ranked_docs:
+            meta = db.get_page_metadata(row["doc_id"])
+            results.append({
+                "doc_id": row["doc_id"],
+                "title": meta["title"] if meta else "",
+                "url": meta["url"] if meta else "",
+                "score": row["score"]
+            })
+
+        return results
+    
+# Replace old search with:
+#def search(query, top_k=100):
+#    return retrieve(query, db.DB_PATH, top_k)

@@ -13,103 +13,86 @@ import sqlite3
 import math
 from collections import defaultdict
 
-#Retrieve documents relevnt to a query. You need (at least) two parameters:
-	#query: The user's search query
-	#index: The location of the local index storing the discovered documents.
-def cosine(vec1, vec2):
-    dot = sum(vec1.get(k, 0) * vec2.get(k, 0) for k in set(vec1) | set(vec2))
-    norm1 = math.sqrt(sum(v * v for v in vec1.values()))
-    norm2 = math.sqrt(sum(v * v for v in vec2.values()))
-    return dot / (norm1 * norm2 + 1e-9)
+# Helperfunction for cosine similarity
+def cosine(v1, v2):
+    denom = math.sqrt(sum(x*x for x in v1.values())) * math.sqrt(sum(x*x for x in v2.values()))
+    if denom == 0: return 0.0
+    return sum(v1.get(k, 0) * v2.get(k, 0) for k in set(v1) | set(v2)) / denom
 
+# Helperfunction for Mean Variance
 def mean_variance_score(vec):
-    if not vec:
-        return 0.0
     values = list(vec.values())
+    if not values: return 0.0
     mean = sum(values) / len(values)
-    variance = sum((v - mean) ** 2 for v in values) / len(values)
-    return mean - variance  # Portfolio Theory
+    var = sum((v - mean)**2 for v in values) / len(values)
+    return mean - var  # Portfolio Theory
 
-def retrieve(query, index_path=db.DB_PATH):
-    print(f"[Ranking] Query: '{query}'")
-
-    tokens = list(tokenize(query).keys())
-    print(f"[Ranking] Tokenized Query: {tokens}")
-
-    if not tokens:
-        print("[Ranking] No tokens, empty list.")
-        return []
-
+# Helperfunction for loading TFIDF data
+def load_tfidf_data(terms, conn):
     tfidf_data = defaultdict(dict)
-    placeholders = ",".join(["?"] * len(tokens))
+    placeholders = ",".join("?" for _ in terms)
+    cur = conn.cursor()
+    cur.execute(f"SELECT doc_id, term, tfidf FROM tfs WHERE term IN ({placeholders})", terms)
+    for doc, term, tfidf in cur.fetchall():
+        tfidf_data[doc][term] = tfidf
+    return tfidf_data
 
-    with sqlite3.connect(index_path) as conn:
-        cursor = conn.cursor()
+# Helperfunction for loading IDF values
+def load_idf_values(terms, conn):
+    placeholders = ",".join("?" for _ in terms)
+    cur = conn.cursor()
+    cur.execute(f"SELECT term, idf FROM tfs WHERE term IN ({placeholders}) GROUP BY term", terms)
+    return dict(cur.fetchall())
 
-        cursor.execute(f"""
-            SELECT doc_id, term, tfidf
-            FROM tfs
-            WHERE term IN ({placeholders})
-        """, tokens)
-        for doc_id, term, tfidf in cursor.fetchall():
-            tfidf_data[doc_id][term] = tfidf
+# Helperfunction for computing vectors
+def compute_query_vector(terms, idf):
+    n = len(terms)
+    return {t: (1/n) * idf.get(t, 0) for t in terms}
 
-        cursor.execute(f"""
-            SELECT term, idf
-            FROM tfs
-            WHERE term IN ({placeholders})
-            GROUP BY term
-        """, tokens)
-        idf_dict = {term: idf for term, idf in cursor.fetchall()}
+# Helperfunction for Ranking
+def rank_documents(tfidf_data, query_vec, k, λ, α):
+    selected, scores = [], {}
 
-    query_tf = {term: 1 / len(tokens) for term in tokens}
-    query_vec = {term: query_tf[term] * idf_dict.get(term, 0) for term in tokens}
-
-    lambda_param = 0.5  # 0 diversity <-> 1 relevance
-    alpha_param = 0.5 # mean variance score
-    selected = []
-    selected_scores = {}
-    candidates = list(tfidf_data.keys())
-
-    for _ in range(min(100, len(candidates))):
-        best_doc = None
-        best_score = -1
-
-        for doc_id in candidates:
-            sim_query = cosine(tfidf_data[doc_id], query_vec)
-            sim_selected = max(
-                [cosine(tfidf_data[doc_id], tfidf_data[s]) for s in selected],
-                default=0
-            )
-            mv_score = mean_variance_score(tfidf_data[doc_id])
-
-            mmr_mv = (
-                lambda_param * sim_query
-                - (1 - lambda_param) * sim_selected
-                + alpha_param * mv_score
-            )
-
-            if mmr_mv > best_score:
-                best_score = mmr_mv
-                best_doc = doc_id
+    for _ in range(min(k, len(tfidf_data))):
+        best_doc, best_score = None, -1
+        for doc in tfidf_data:
+            if doc in selected: continue
+            sim_q = cosine(tfidf_data[doc], query_vec)
+            sim_d = max((cosine(tfidf_data[doc], tfidf_data[d]) for d in selected), default=0)
+            mv = mean_variance_score(tfidf_data[doc])
+            score = λ * sim_q - (1 - λ) * sim_d + α * mv
+            if score > best_score:
+                best_doc, best_score = doc, score
 
         if best_doc:
             selected.append(best_doc)
-            selected_scores[best_doc] = best_score
-            candidates.remove(best_doc)
-            meta = db.get_page_metadata(best_doc)
-            title = meta["title"] if meta else "Unknown Title"
-            print(f"[Ranking] Doc {best_doc} ('{title}') with Score {best_score:.4f}")
+            scores[best_doc] = best_score
+            title = db.get_page_metadata(best_doc)["title"] if db.get_page_metadata(best_doc) else "??"
+            print(f"[Ranking] Doc {best_doc} ('{title}') Score: {best_score:.4f}")
 
-    results = []
-    for doc_id in selected:
-        meta = db.get_page_metadata(doc_id)
-        if meta:
-            results.append({
-                "doc_id": doc_id,
-                "title": meta["title"],
-                "url": meta["url"],
-                "score": selected_scores.get(doc_id, 0)
-            })
+    return selected, scores
 
-    return results
+#Retrieve documents relevnt to a query. You need (at least) two parameters:
+	#query: The user's search query
+	#index: The location of the local index storing the discovered documents.
+def retrieve(query, index_path=db.DB_PATH, k=100, λ=0.5, α=0.5):
+    print(f"[Ranking] Query: '{query}'")
+    terms = list(tokenize(query).keys())
+    if not terms: return []
+
+    with sqlite3.connect(index_path) as conn:
+        tfidf_data = load_tfidf_data(terms, conn)
+        idf = load_idf_values(terms, conn)
+
+    query_vec = compute_query_vector(terms, idf)
+    selected, scores = rank_documents(tfidf_data, query_vec, k, λ, α)
+
+    return [
+        {
+            "doc_id": doc,
+            "title": meta["title"],
+            "url": meta["url"],
+            "score": scores[doc]
+        }
+        for doc in selected if (meta := db.get_page_metadata(doc))
+    ]
