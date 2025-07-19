@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   palmer_switch.addEventListener('change', () => {
   if(!palmer_switch.checked) {
     
-      denied_sound.play().catch(() => {});
+    denied_sound.play().catch(() => {});
     
     setTimeout(() => {
       palmer_switch.checked = true;
