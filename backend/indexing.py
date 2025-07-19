@@ -200,4 +200,4 @@ def search(query, top_k=100):
     
 # Replace old search with:
 #def search(query, top_k=100):
-#    return retrieve(query, db.DB_PATH, top_k)
+#    return retrieve(query, db.DB_PATH, top_k) # Optional Parameter: Lambda (Relevance) and Alpha (Diversity)
