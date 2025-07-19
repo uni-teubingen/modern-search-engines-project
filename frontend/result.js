@@ -97,7 +97,7 @@ function animateAssistant() {
  */
 
 function playRandomSound(){
-  const random = Math.floor(Math.random() * 2) + 1;
+  const random = Math.floor(Math.random() * 5) + 1;
   const audio = new Audio(`/assets/audio/${random}.mp3`);
   audio.play().catch(err => console.warn("Autoplay disabled:", err));
 }

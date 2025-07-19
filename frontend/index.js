@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", () => {
  */
 document.addEventListener('DOMContentLoaded', () => {
   const palmer_switch = document.getElementById('disablePalmer');
-  const denied_sound = new Audio("/assets/audio/1.mp3");
+  const denied_sound = new Audio("/assets/audio/denied.mp3");
   denied_sound.preload = 'auto';
   palmer_switch.addEventListener('change', () => {
   if(!palmer_switch.checked) {
