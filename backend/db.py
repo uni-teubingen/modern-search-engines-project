@@ -30,7 +30,8 @@ def init_db():
             url TEXT UNIQUE,
             title TEXT,
             content TEXT,
-            crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            done INTEGER DEFAULT 0
         );
     """)
 
@@ -48,6 +49,21 @@ def init_db():
     print("[✅] Datenbank initialisiert:", DB_PATH)
     conn.commit()
     conn.close()
+
+def get_all_document_ids():
+    """Gibt alle Dokument-IDs zurück"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM pages")
+        return [row[0] for row in cursor.fetchall()]
+
+def get_document_content(doc_id):
+    """Holt den Inhalt eines spezifischen Dokuments"""
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT content FROM pages WHERE id = ?", (doc_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
 
 def get_all_documents():
     with sqlite3.connect(DB_PATH) as conn:
