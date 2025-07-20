@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import db
 from ranking import Ranker
 import re
+import os
 
 class TFIDFIndexer:
     def __init__(self, db_path):
@@ -16,6 +17,7 @@ class TFIDFIndexer:
         self.pages = db.PageTable(self.db)
         self.db = db.TfTable(self.db)
         self.helper = HelperFunction()
+    
     def compute_and_store(self):
         
         start = time.time()
@@ -80,44 +82,17 @@ class SearchEngine:
         self.pages = db.PageTable(self.db)
         self.helper = HelperFunction()
         self.ranker = Ranker()
+        self.tf = db.TfTable(self.db)
 
-    def search(self, query, top_k=100):
+    def search(self, query):
         terms = self.helper.tokenize(query)
         if not terms:
             return []
 
         scored_docs,palmer_score = self._get_ranked_documents(terms)
-        return self._build_results(scored_docs, query,palmer_score)
-
-    # BACKUP
-    def _get_ranked_documents_BACK(self, terms, top_k):
-        placeholders = ",".join(["?"] * len(terms))
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-
-            cursor.execute(f"""
-                SELECT doc_id, SUM(tfidf) AS score
-                FROM tfs
-                WHERE term IN ({placeholders})
-                GROUP BY doc_id
-                ORDER BY score DESC
-                LIMIT ?
-            """, (*terms, top_k))
-
-            rows = cursor.fetchall()
-
-            contains_boris_palmer = False
-
-            # Dokumentinhalte holen und prüfen
-            for row in rows:
-                content = self.pages.get_content(row["doc_id"])
-                if content and "boris palmer" in content.lower():
-                    contains_boris_palmer = True
-                    break
-
-            return rows, contains_boris_palmer
-    # BACKUP
+        results = self._build_results(scored_docs, query,palmer_score)
+        self.helper.performance_report(results)
+        return results
 
     def _get_ranked_documents(self, terms):
         ranked_docs, palmer_flag = self.ranker.retrieve(terms)
@@ -130,7 +105,8 @@ class SearchEngine:
             meta = self.pages.get_metadata(doc_id)
             content = self.pages.get_content(doc_id)
             snippet = self._extract_snippet_from_html(content, query)
-            result_dto = ResultDto(meta["title"] if meta else "",meta["url"] if meta else "",palmer_score,snippet)
+            score = self.tf.get_total_tfidf_score(doc_id)
+            result_dto = ResultDto(doc_id,meta["title"] if meta else "",meta["url"] if meta else "",palmer_score,snippet,score)
             results.append(result_dto)
         return results
     
@@ -169,3 +145,30 @@ class HelperFunction():
         ])
         tokens = re.findall(r'\b[a-zA-Z]{2,}\b', text.lower())
         return [t for t in tokens if t not in stopwords]
+    
+    def performance_report(self, result):
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(base_dir, "performance")
+        os.makedirs(output_dir, exist_ok=True)
+
+        filename = "performance_results.txt"
+        filepath = os.path.join(output_dir, filename)
+
+        query_number = 1
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+                if lines:
+                    last_line = lines[-1]
+                    try:
+                        last_query_num = int(last_line.split("\t")[0])
+                        query_number = last_query_num + 1
+                    except (IndexError, ValueError):
+                        pass
+
+        with open(filepath, "a", encoding="utf-8") as f:
+            for rank, dto in enumerate(result[:100], start=1):
+                line = f"{query_number}\t{rank}\t{dto.url}\t{dto.score:.3f}\n"
+                f.write(line)
+

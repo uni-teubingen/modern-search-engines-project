@@ -147,3 +147,12 @@ class TfTable:
                 return
             for row in rows:
                 print(f"[doc_id={row['doc_id']}] term='{row['term']}' | tf={row['tf']:.4f} | idf={row['idf']:.4f} | tfidf={row['tfidf']:.4f}")
+
+    def get_total_tfidf_score(self, doc_id: int) -> float:
+        with self.db.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT SUM(tfidf) FROM tfs WHERE doc_id = ?
+            """, (doc_id,))
+            result = cursor.fetchone()
+            return result[0] if result[0] is not None else 0.0
