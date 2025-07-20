@@ -10,7 +10,7 @@ services:
       - searchnet
 
   frontend:
-    image: nginx:alpine        
+    image: nginx:alpine   
     volumes:
       - ./frontend:/usr/share/nginx/html:ro  
     ports:
