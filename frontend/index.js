@@ -21,3 +21,22 @@ window.addEventListener("DOMContentLoaded", () => {
     form.addEventListener("submit", handleSearch);
   }
 });
+
+/**
+ * Unabstellbarer Switch des AI-Assistenten
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  const palmer_switch = document.getElementById('disablePalmer');
+  const denied_sound = new Audio("/assets/audio/denied.mp3");
+  denied_sound.preload = 'auto';
+  palmer_switch.addEventListener('change', () => {
+  if(!palmer_switch.checked) {
+    
+    denied_sound.play().catch(() => {});
+    
+    setTimeout(() => {
+      palmer_switch.checked = true;
+    }, 150);
+  }
+  });
+});
