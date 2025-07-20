@@ -156,3 +156,21 @@ class TfTable:
             """, (doc_id,))
             result = cursor.fetchone()
             return result[0] if result[0] is not None else 0.0
+        
+class StatusTable:
+    def __init__(self, db: Database):
+        self.db = db
+    def get_status(self):
+        with self.db.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT status FROM status")
+            row = cursor.fetchone()
+            return row[0] if row else None
+
+    def set_status(self, status):
+        with self.db.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM status")
+            cursor.execute("INSERT INTO status (status) VALUES (?)", (status,))
+            conn.commit()
+            print(f"✅ Status auf {status} gesetzt.")
