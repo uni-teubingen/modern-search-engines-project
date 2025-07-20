@@ -4,16 +4,15 @@ import indexing
 import time
 from app import app
 if __name__ == "__main__":
-    # index = indexing.TFIDFIndexer(db.DB_PATH)
     database =db.Database(db.DB_PATH)
-    # start_time = time.time()
-    database.drop_all()
     database.init()
-    crawler = crawler.Crawler()
-    crawler.start()
-    # index.compute_and_store()
-    # end_time = time.time()
-    # elapsed = end_time - start_time
-    # print(f"⏱️ Gesamtdauer: {elapsed:.2f} Sekunden")
-    # print("✅ Backend gestartet.")
-    app.run(host="0.0.0.0", port=5050)
+    tables_exist=database.has_entries()
+    if(tables_exist):
+        app.run(host="0.0.0.0", port=5050)
+    else:
+        index = indexing.TFIDFIndexer(db.DB_PATH)
+        crawl = crawler.Crawler()
+        crawl.start()
+        index.compute_and_store()
+        app.run(host="0.0.0.0", port=5050)
+   

@@ -52,6 +52,18 @@ class Database:
             """)
             print("[✅] Datenbank initialisiert:", self.db_path)
 
+    def has_entries(self):
+        with self.connect() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT EXISTS(SELECT 1 FROM pages LIMIT 1);")
+            pages_exist = cursor.fetchone()[0] == 1
+
+            cursor.execute("SELECT EXISTS(SELECT 1 FROM tfs LIMIT 1);")
+            tfs_exist = cursor.fetchone()[0] == 1
+
+            return pages_exist and tfs_exist
+        
     def drop_all(self):
         with self.connect() as conn:
             cursor = conn.cursor()

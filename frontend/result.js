@@ -39,17 +39,12 @@ function renderResults(data) {
   });
 }
 
-/**
- * Führt die Suche aus und zeigt Ergebnisse
- */
 function initSearchPage() {
   const query = getQueryParam("q");
 
-  // Setzt den Suchbegriff in die Eingabe
   const input = document.getElementById("searchBox");
   if (input) input.value = query;
 
-  // Ruft API auf
   if (query.trim()) {
     fetch(`http://localhost:5050/api/search?q=${encodeURIComponent(query)}`)
       .then(res => res.json())
@@ -61,9 +56,6 @@ function initSearchPage() {
   }
 }
 
-/**
- * Reagiert auf neue Suche im Suchformular
- */
 function initSearchFormHandler() {
   const form = document.getElementById("searchForm");
   if (form) {
@@ -73,14 +65,12 @@ function initSearchFormHandler() {
       const newQuery = input.value.trim();
 
       if (newQuery) {
-        // Starte neue Suche mit page=1
         window.location.href = `result.html?q=${encodeURIComponent(newQuery)}&page=1`;
       }
     });
   }
 }
 
-// Seite initialisieren
 window.addEventListener("DOMContentLoaded", () => {
   initSearchPage();
   initSearchFormHandler();
