@@ -1,172 +1,150 @@
-from tokenization import tokenize
 import sqlite3
-from tokenization import tokenize
-import db
 import math
-from collections import Counter
-# # 1. Web Crawling & Indexing
-# #Crawl the web to discover **English content related to Tübingen**. The crawled content should be stored locally. 
-# #If interrupted, your crawler should be able to re-start and pick up the crawling process at any time.
-# import sqlite3
-# import os
-# from tokenization import tokenize
-# from db import DB_PATH
-# import warnings
+import time
+from collections import Counter, defaultdict
+from dto.result_dto import ResultDto
+from tokenization import tokenize
+from readability import Document
+from bs4 import BeautifulSoup
+import db
 
 
-# # Return the entire textual content of a webpage saved in the db via its id
-# # @parm id : int
-# # return String
-# def retrieve_content_by_id(id):
-# 	table = "pages"
-# 	with sqlite3.connect(DB_PATH) as conn:
-# 		conn.row_factory = sqlite3.Row
-# 		cursor = conn.cursor()
-# 		cursor.execute(f"SELECT content FROM {table} WHERE id = ?;", (id,))
-# 		row = cursor.fetchone()
-# 		return row["content"]
+class TFIDFIndexer:
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self.db = db.Database(self.db_path)
+        self.pages = db.PageTable(self.db)
+        self.db = db.TfTable(self.db)
 
-# # Add tokenized terms with their frequency and corresponding ID into the database
-# # @param id : int
-# # @param tokens(token, frequency) : set(String, int)
-# # return None
-# def add_tokens_to_db(id, tokens):
-# 	table = "tfs"
-# 	with sqlite3.connect(DB_PATH) as conn:
-# 		cursor = conn.cursor()
-# 		# Add nonexistent tokens to the DB
-# 		cursor.execute(f"PRAGMA table_info({table});")
-# 		existing_tokens = {row[1] for row in cursor.fetchall()}
-# 		for token in tokens:
-# 			if token not in existing_tokens:
-# 				cursor.execute(f"ALTER TABLE {table} ADD COLUMN {token} INTEGER DEFAULT 0;")
-# 		# Add Values to DB (Parsing a single command to save runtime)
-# 		update_token = ", ".join(f"{token} = ?" for token in tokens)
-# 		update_command = f"UPDATE {table} SET {update_token} WHERE idxid = ?;"
-# 		value_pair = list(tokens.values()) + [id]
-# 		cursor.execute(update_command, value_pair)
-
-
-# # Index a page by tokenizing its contence in a term-frequency table
-# # @param id : int
-# # return None
-# def index(id):
-#     # Get Raw textual content as an unparsed String
-# 	RAW_CONTENT = retrieve_content_by_id(id)
-# 	#Just there for potential errors
-# 	if RAW_CONTENT is None:
-# 		warnings.warn('Page with id : ' + str(id) + " does not have any content")
-# 		return None
-# 	# Tokenize content to get library with terms and their frequencies
-# 	TOKENIZED_CONTENT = tokenize(RAW_CONTENT)
-# 	# Update the DB to include the term frequencies of the new documents
-# 	add_tokens_to_db(id, TOKENIZED_CONTENT)
-
-
-# # Create a df-table in the database, including all tokenized terms within every document in the database
-# # @param None
-# # return None
-# def create_dfs_table():
-# 	table_tfs = "tfs"
-# 	table_dfs = "dfs"
-# 	with sqlite3.connect(DB_PATH) as conn:
-# 		cursor = conn.cursor()
-# 		# Get Total number of indexed documents
-# 		indexed_documents = cursor.execute(f"SELECT COUNT (*) FROM {table_tfs}").fetchone()[0]
-# 		# Fetch all Terms out of the tf-table in the database
-# 		cursor.execute(f"PRAGMA table_info({table_tfs});")
-# 		terms_and_id = cursor.fetchall()
-# 		terms = [row[1] for row in terms_and_id[1:]]
-# 		# Calculate DFs (Parsing a single command to save runtime)
-# 		df_seperated = []
-# 		for term in terms:
-# 			df_part = (f"SUM(CASE WHEN) {term} <> 0 THEN 1 ELSE 0 END * 1.0 / {indexed_documents} AS {term}")
-# 			df_seperated.append(df_part)
-# 			dfs_select = ("SELECT" + ", ".join(df_seperated) + f" FROM {table_tfs}")
-# 		dfs = cursor.execute(dfs_select).fetchone()
-# 		# (Re)Initialize dfs-table
-# 		cursor.execute(f"DROP TABLE IF EXISTS {table_dfs};")
-# 		term_command = " ,".join(f"{term}" for term in terms)
-# 		cursor.execute(f"CREATE TABLE {table_dfs} ({term_command});")
-# 		placeholder_symbols = " ,".join("?" for _ in terms)
-# 		cursor.execute(f"INSERT INTO {table_dfs} VALUES ({placeholder_symbols})", dfs)
-
-
-
-def calculate_document_frequencies(all_tokens):
-    df = {}
-    for tokens in all_tokens.values():
-        for term in set(tokens):
-            df[term] = df.get(term, 0) + 1
-    return df
-
-def calculate_tf(tokens):
-    total_terms = len(tokens)
-    tf_counter = Counter(tokens)
-
-    tf_result = {}
-    for term, count in tf_counter.items():
-        tf_result[term] = count / total_terms 
-    return tf_result
-
-def calculate_idf(term_doc_freq, total_docs):
-    idf_result = {}
-    for term, df in term_doc_freq.items():
-        idf_result[term] = math.log(total_docs / df)
-    return idf_result
-
-def compute_and_store_tfidf():
-    documents = db.get_all_documents()
-    total_docs = len(documents)
-    all_tokens = {}
-    for doc in documents:
-        doc_id = doc["id"]
-        content = doc["content"]
-        tokens = tokenize(content)
-        all_tokens[doc_id] = tokens
+    def compute_and_store(self):
         
-    term_doc_freq = calculate_document_frequencies(all_tokens)
-    
-    idf_values = calculate_idf(term_doc_freq, total_docs)
+        start = time.time()
+        documents = self.pages.get_all()
+        print(f"📄 Indexing {len(documents)} documents...")
 
-    db.reset_tfs_table()
+        doc_tokens, term_doc_freq = self._tokenize_documents(documents)
+        idf_values = self._compute_idf(term_doc_freq, len(documents))
+        batch = self._build_tfidf_batch(doc_tokens, idf_values)
 
-    for doc_id, tokens in all_tokens.items():
-        tf_values = calculate_tf(tokens)
-        for term, tf in tf_values.items():
-            idf = idf_values[term]
-            tfidf = tf * idf
-            db.insert_tfidf(doc_id, term, tf, idf, tfidf)
+        self.db.reset()
+        self._store_batch(batch)
 
-    print("TF-IDF-Index erfolgreich erstellt.")
+        print(f"✅ Index erstellt in {time.time() - start:.2f} sec")
 
-def search(query, top_k=100):
-    terms = tokenize(query)
-    term_placeholders = ",".join(["?"] * len(terms))
+    def _tokenize_documents(self, documents):
+        doc_tokens = {}
+        term_doc_freq = defaultdict(int)
 
-    with sqlite3.connect(db.DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        for doc in documents:
+            tokens = tokenize(doc["content"])
+            doc_tokens[doc["id"]] = tokens
+            for term in set(tokens):
+                term_doc_freq[term] += 1
 
-        cursor.execute(f"""
-            SELECT doc_id, SUM(tfidf) AS score
-            FROM tfs
-            WHERE term IN ({term_placeholders})
-            GROUP BY doc_id
-            ORDER BY score DESC
-            LIMIT ?
-        """, (*terms, top_k))
+        return doc_tokens, term_doc_freq
 
-        ranked_docs = cursor.fetchall()
+    def _compute_idf(self, term_doc_freq, total_docs):
+        return {
+            term: math.log(total_docs / df)
+            for term, df in term_doc_freq.items()
+        }
 
+    def _build_tfidf_batch(self, doc_tokens, idf_values):
+        batch = []
+        for doc_id, tokens in doc_tokens.items():
+            tf = Counter(tokens)
+            total = len(tokens)
+            for term, count in tf.items():
+                tf_val = count / total
+                idf_val = idf_values.get(term, 0.0)
+                tfidf = tf_val * idf_val
+                batch.append((doc_id, term, tf_val, idf_val, tfidf))
+        return batch
+
+    def _store_batch(self, batch):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany("""
+                INSERT INTO tfs (doc_id, term, tf, idf, tfidf)
+                VALUES (?, ?, ?, ?, ?)
+            """, batch)
+            conn.commit()
+
+
+class SearchEngine:
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self.db = db.Database(self.db_path)
+        self.pages = db.PageTable(self.db)
+
+    def search(self, query, top_k=100):
+        terms = tokenize(query)
+        if not terms:
+            return []
+
+        scored_docs,palmer_score = self._get_ranked_documents(terms, top_k)
+        return self._build_results(scored_docs, query,palmer_score)
+
+    def _get_ranked_documents(self, terms, top_k):
+        placeholders = ",".join(["?"] * len(terms))
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute(f"""
+                SELECT doc_id, SUM(tfidf) AS score
+                FROM tfs
+                WHERE term IN ({placeholders})
+                GROUP BY doc_id
+                ORDER BY score DESC
+                LIMIT ?
+            """, (*terms, top_k))
+
+            rows = cursor.fetchall()
+
+            contains_boris_palmer = False
+
+            # Dokumentinhalte holen und prüfen
+            for row in rows:
+                content = self.pages.get_content(row["doc_id"])
+                if content and "boris palmer" in content.lower():
+                    contains_boris_palmer = True
+                    break
+
+            return rows, contains_boris_palmer
+
+
+    def _build_results(self, ranked_docs, query,palmer_score):
         results = []
         for row in ranked_docs:
-            meta = db.get_page_metadata(row["doc_id"])
-            results.append({
-                "doc_id": row["doc_id"],
-                "title": meta["title"] if meta else "",
-                "url": meta["url"] if meta else "",
-                "score": row["score"]
-            })
-
+            doc_id = row["doc_id"]
+            meta = self.pages.get_metadata(doc_id)
+            content = self.pages.get_content(doc_id)
+            snippet = self._extract_snippet_from_html(content, query)
+            result_dto = ResultDto(meta["title"] if meta else "",meta["url"] if meta else "",palmer_score,snippet)
+            results.append(result_dto)
         return results
+
+    def _extract_snippet_from_html(self, html: str, query: str, max_chars=250):
+        try:
+            doc = Document(html)
+            main_html = doc.summary()
+            text = BeautifulSoup(main_html, 'html.parser').get_text(separator=' ', strip=True)
+        except Exception:
+            text = BeautifulSoup(html, 'html.parser').get_text(separator=' ', strip=True)
+        return self._generate_snippet(text, query, max_chars=max_chars)
+
+    def _generate_snippet(self, text: str, query: str, window: int = 40, max_chars: int = 250) -> str:
+        if not text or not query:
+            return ""
+        words = text.split()
+        query_terms = query.lower().split()
+
+        for i, word in enumerate(words):
+            if any(q in word.lower() for q in query_terms):
+                start = max(0, i - window // 2)
+                end = min(len(words), i + window // 2)
+                snippet = " ".join(words[start:end])
+                return snippet.strip()[:max_chars] + "..."
+
+        return text[:max_chars] + "..."  # fallback
