@@ -7,10 +7,10 @@ import sqlite3
 import time
 import threading
 from queue import Queue
-from db import DB_PATH, SEED_URLS, init_db
+from db import DB_PATH, SEED_URLS
 
 ALLOWED_DOMAIN = "tuebingen"
-MAX_PAGES = 1000
+MAX_PAGES = 4000
 USER_AGENT = "TüBingCrawler/1.0"
 WORKER_THREADS = 10  # Anzahl paralleler Crawler
 REQUEST_DELAY = 0.5  # Sekunden zwischen Requests
@@ -150,11 +150,14 @@ def process_url(url):
             seen_urls.add(normalized_url)
             english_urls.add(normalized_url)
             crawled_count += 1
-            print(f"[{crawled_count}/{MAX_PAGES}] Crawled: {normalized_url}")
+            #print(f"[{crawled_count}/{MAX_PAGES}] Crawled: {normalized_url}")
         
         # Neue Links extrahieren
         for link in soup.find_all("a", href=True):
             href = link["href"]
+            # Skip mailto-Links
+            if href.startswith(("mailto:", "tel:", "javascript:", "ftp:", "file:")):
+                continue
             absolute_url = urljoin(normalized_url, href)
             clean_url = normalize_url(absolute_url)
             
@@ -172,6 +175,8 @@ def process_url(url):
 def worker():
     """Worker-Thread für paralleles Crawling"""
     while True:
+        if crawled_count >= MAX_PAGES:
+            break
         url = frontier.get()
         try:
             process_url(url)
@@ -181,16 +186,32 @@ def worker():
 def crawl():
     """Startet das Crawling mit mehreren Workern"""
     #init_db()
+    start_time = time.time()
     
     # Seed URLs zur Warteschlange hinzufügen
     for url in SEED_URLS:
         frontier.put(normalize_url(url))
-    
     # Worker-Threads starten
+    threads = []
     for _ in range(WORKER_THREADS):
         t = threading.Thread(target=worker, daemon=True)
         t.start()
-    
-    # Warte bis alle URLs verarbeitet sind oder MAX_PAGES erreicht
-    frontier.join()
-    print(f"✅ Crawling abgeschlossen. Englische Seiten: {len(english_urls)}")
+        threads.append(t)
+    try:
+        # Hauptschleife für Fortschrittskontrolle
+        while True:
+            time.sleep(1)
+            
+            # Abbruchbedingungen prüfen
+            if crawled_count >= MAX_PAGES:
+                print(f"MAX_PAGES ({MAX_PAGES}) erreicht")
+                break
+    except KeyboardInterrupt:
+        print("\n🛑 Manueller Abbruch durch Nutzer")
+    finally:
+        for t in threads:
+            t.join(timeout=2)
+        print(f"✅ Crawling abgeschlossen.")
+        end_time = time.time()
+        elapsed = start_time - end_time
+        print(f"⏱️ Crawling abgeschlossen in {elapsed:.2f} Sekunden")
