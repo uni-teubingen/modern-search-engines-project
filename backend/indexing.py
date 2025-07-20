@@ -7,6 +7,7 @@ from tokenization import tokenize
 from readability import Document
 from bs4 import BeautifulSoup
 import db
+from ranking import retrieve
 
 
 class TFIDFIndexer:
@@ -85,7 +86,8 @@ class SearchEngine:
         scored_docs,palmer_score = self._get_ranked_documents(terms, top_k)
         return self._build_results(scored_docs, query,palmer_score)
 
-    def _get_ranked_documents(self, terms, top_k):
+    # BACKUP
+    def _get_ranked_documents_BACK(self, terms, top_k):
         placeholders = ",".join(["?"] * len(terms))
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -112,7 +114,11 @@ class SearchEngine:
                     break
 
             return rows, contains_boris_palmer
+    # BACKUP
 
+    def _get_ranked_documents(self, terms, top_k):
+        ranked_docs, palmer_flag = retrieve(terms, self.db_path, top_k)
+        return ranked_docs, palmer_flag
 
     def _build_results(self, ranked_docs, query,palmer_score):
         results = []
@@ -124,7 +130,7 @@ class SearchEngine:
             result_dto = ResultDto(meta["title"] if meta else "",meta["url"] if meta else "",palmer_score,snippet)
             results.append(result_dto)
         return results
-
+    
     def _extract_snippet_from_html(self, html: str, query: str, max_chars=250):
         try:
             doc = Document(html)
