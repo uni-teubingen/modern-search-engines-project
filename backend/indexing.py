@@ -1,101 +1,49 @@
 from tokenization import tokenize
 import sqlite3
 import db
+from collections import Counter, defaultdict
+from readability import Document
+from bs4 import BeautifulSoup
 import math
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 import time
 
-all_tokens = {}
-all_tokens_lock = threading.Lock()
-
-def calculate_document_frequencies(all_tokens):
-    df = {}
-    for tokens in all_tokens.values():
-        for term in set(tokens):
-            df[term] = df.get(term, 0) + 1
-    return df
-
-def calculate_tf(tokens):
-    total_terms = len(tokens)
-    tf_counter = Counter(tokens)
-
-    tf_result = {}
-    for term, count in tf_counter.items():
-        tf_result[term] = count / total_terms 
-    return tf_result
-
-def calculate_idf(term_doc_freq, total_docs):
-    idf_result = {}
-    for term, df in term_doc_freq.items():
-        idf_result[term] = math.log(total_docs / df)
-    return idf_result
-
-def tokenize_batch(documents_chunk):
-    local_tokens = {}
-    for doc in documents_chunk:
-        doc_id = doc["id"]
-        content = doc["content"]
-        tokens = tokenize(content)
-        local_tokens[doc_id] = tokens
-
-    
-    with all_tokens_lock:
-        all_tokens.update(local_tokens)
-
-def process_document(doc_id, tokens, idf_values):
-    tf_values = calculate_tf(tokens)
-    results = []
-    for term, tf in tf_values.items():
-        idf = idf_values.get(term, 0.0)
-        tfidf = tf * idf
-        results.append((doc_id, term, tf, idf, tfidf))
-    return results
-
 def compute_and_store_tfidf():
-    start_time = time.time()
-    global all_tokens
-    all_tokens = {}
-
+    start = time.time()
     documents = db.get_all_documents()
     total_docs = len(documents)
-    NUM_WORKERS = 8
-    chunk_size = (len(documents) + NUM_WORKERS - 1) // NUM_WORKERS
-    chunks = [documents[i:i+chunk_size] for i in range(0, len(documents), chunk_size)]
-    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-        executor.map(tokenize_batch, chunks)
-    term_doc_freq = calculate_document_frequencies(all_tokens)
-    idf_values = calculate_idf(term_doc_freq, total_docs)
+    print(f"📄 Indexing {total_docs} documents...")
+
+    term_doc_freq = defaultdict(int)
+    doc_tokens = {}
+
+    for doc in documents:
+        tokens = tokenize(doc["content"])
+        doc_tokens[doc["id"]] = tokens
+        for term in set(tokens):
+            term_doc_freq[term] += 1
+
+    idf_values = {term: math.log(total_docs / df) for term, df in term_doc_freq.items()}
+
     db.reset_tfs_table()
-    results = []
-    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-        futures = {
-            executor.submit(process_document, doc_id, tokens, idf_values): doc_id
-            for doc_id, tokens in all_tokens.items()
-        }
+    batch = []
+    for doc_id, tokens in doc_tokens.items():
+        tf = Counter(tokens)
+        total = len(tokens)
+        for term, count in tf.items():
+            tf_val = count / total
+            idf_val = idf_values.get(term, 0.0)
+            tfidf = tf_val * idf_val
+            batch.append((doc_id, term, tf_val, idf_val, tfidf))
 
-        for future in as_completed(futures):
-            results.extend(future.result())
+    with sqlite3.connect(db.DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.executemany("""
+            INSERT INTO tfs (doc_id, term, tf, idf, tfidf)
+            VALUES (?, ?, ?, ?, ?)
+        """, batch)
+        conn.commit()
 
-    def insert_batch(batch):
-        with sqlite3.connect(db.DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.executemany("""
-                INSERT INTO tfs (doc_id, term, tf, idf, tfidf)
-                VALUES (?, ?, ?, ?, ?)
-            """, batch)
-            conn.commit()
-
-    BATCH_SIZE = 10000
-    batches = [results[i:i+BATCH_SIZE] for i in range(0, len(results), BATCH_SIZE)]
-
-    for batch in batches:
-        insert_batch(batch)
-
-    end_time = time.time()
-    elapsed = end_time - start_time
-    print(f"⏱️ TF-IDF Index erstellt in {elapsed:.2f} Sekunden.")
+    print(f"✅ Index erstellt in {time.time() - start:.2f} sec")
 
 
 def search(query, top_k=100):
@@ -120,11 +68,43 @@ def search(query, top_k=100):
         results = []
         for row in ranked_docs:
             meta = db.get_page_metadata(row["doc_id"])
+            content = db.get_document_content(row["doc_id"])
+            snippet = extract_snippet_from_html(content, query)
             results.append({
                 "doc_id": row["doc_id"],
                 "title": meta["title"] if meta else "",
                 "url": meta["url"] if meta else "",
-                "score": row["score"]
+                "score": row["score"],
+                "snippet": snippet
             })
 
         return results
+    
+def generate_snippet(text: str, query: str, window: int = 40, max_chars: int = 250) -> str:
+    """
+    Generiert ein Snippet aus dem Dokumenttext auf Basis der Suchanfrage.
+    Bevorzugt keyword-relevante Ausschnitte, fallback: erste Sätze.
+    """
+    if not text or not query:
+        return ""
+
+    words = text.split()
+    query_terms = query.lower().split()
+
+    for i, word in enumerate(words):
+        if any(q in word.lower() for q in query_terms):
+            start = max(0, i - window // 2)
+            end = min(len(words), i + window // 2)
+            snippet = " ".join(words[start:end])
+            return snippet.strip()[:max_chars] + "..."
+
+def extract_snippet_from_html(html: str, query: str, max_chars=250):
+    try:
+        doc = Document(html)
+        main_html = doc.summary()
+        text = BeautifulSoup(main_html, 'html.parser').get_text(separator=' ', strip=True)
+    except Exception:
+        text = BeautifulSoup(html, 'html.parser').get_text(separator=' ', strip=True)
+
+    return generate_snippet(text, query, max_chars=max_chars)
+

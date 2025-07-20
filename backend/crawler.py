@@ -10,7 +10,7 @@ from queue import Queue
 from db import DB_PATH, SEED_URLS
 
 ALLOWED_DOMAIN = "tuebingen"
-MAX_PAGES = 4000
+MAX_PAGES = 500
 USER_AGENT = "TüBingCrawler/1.0"
 WORKER_THREADS = 10  # Anzahl paralleler Crawler
 REQUEST_DELAY = 0.5  # Sekunden zwischen Requests
@@ -44,12 +44,11 @@ def normalize_url(url):
 def is_allowed_by_robots(url):
     parsed = urlparse(url)
     domain = parsed.netloc
-    
-    with url_lock:  # Thread-sicherer Zugriff
+
+    with url_lock:
         if domain not in robot_parsers:
             rp = RobotFileParser()
             robots_url = f"{parsed.scheme}://{domain}/robots.txt"
-            
             try:
                 response = requests.get(
                     robots_url,
@@ -62,11 +61,17 @@ def is_allowed_by_robots(url):
                     rp = None
             except Exception:
                 rp = None
-            
             robot_parsers[domain] = rp
-        
+
         parser = robot_parsers[domain]
-        return parser.can_fetch(USER_AGENT, url) if parser else True
+        if parser is None:
+            return True
+        
+        if parser.can_fetch(USER_AGENT, url):
+            return True
+
+        return parser.can_fetch("*", url)
+
 
 def is_english(text):
     """Verbesserte Spracherkennung"""
@@ -185,7 +190,7 @@ def worker():
 
 def crawl():
     """Startet das Crawling mit mehreren Workern"""
-    #init_db()
+    print(f"✅ Crawler started. MAX_PAGES set to {MAX_PAGES}... Waiting for URLs to crawl.")
     start_time = time.time()
     
     # Seed URLs zur Warteschlange hinzufügen
@@ -207,11 +212,11 @@ def crawl():
                 print(f"MAX_PAGES ({MAX_PAGES}) erreicht")
                 break
     except KeyboardInterrupt:
-        print("\n🛑 Manueller Abbruch durch Nutzer")
+        print("\n🛑 Manual termination by the user (KeyboardInterrupt)")
     finally:
         for t in threads:
             t.join(timeout=2)
-        print(f"✅ Crawling abgeschlossen.")
+        print("✅ Crawling abgeschlossen.")
         end_time = time.time()
-        elapsed = start_time - end_time
+        elapsed = end_time - start_time
         print(f"⏱️ Crawling abgeschlossen in {elapsed:.2f} Sekunden")
