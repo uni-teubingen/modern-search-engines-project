@@ -5,6 +5,7 @@ import db
 import math
 from collections import Counter
 from ranking import retrieve
+
 # # 1. Web Crawling & Indexing
 # #Crawl the web to discover **English content related to Tübingen**. The crawled content should be stored locally. 
 # #If interrupted, your crawler should be able to re-start and pick up the crawling process at any time.
