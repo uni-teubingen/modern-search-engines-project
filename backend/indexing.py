@@ -3,12 +3,11 @@ import math
 import time
 from collections import Counter, defaultdict
 from dto.result_dto import ResultDto
-from tokenization import tokenize
 from readability import Document
 from bs4 import BeautifulSoup
 import db
-from ranking import retrieve
-
+from ranking import Ranker
+import re
 
 class TFIDFIndexer:
     def __init__(self, db_path):
@@ -16,7 +15,7 @@ class TFIDFIndexer:
         self.db = db.Database(self.db_path)
         self.pages = db.PageTable(self.db)
         self.db = db.TfTable(self.db)
-
+        self.helper = HelperFunction()
     def compute_and_store(self):
         
         start = time.time()
@@ -32,12 +31,14 @@ class TFIDFIndexer:
 
         print(f"✅ Index erstellt in {time.time() - start:.2f} sec")
 
+    
     def _tokenize_documents(self, documents):
         doc_tokens = {}
         term_doc_freq = defaultdict(int)
 
+        
         for doc in documents:
-            tokens = tokenize(doc["content"])
+            tokens = self.helper.tokenize(doc["content"])
             doc_tokens[doc["id"]] = tokens
             for term in set(tokens):
                 term_doc_freq[term] += 1
@@ -77,13 +78,15 @@ class SearchEngine:
         self.db_path = db_path
         self.db = db.Database(self.db_path)
         self.pages = db.PageTable(self.db)
+        self.helper = HelperFunction()
+        self.ranker = Ranker()
 
     def search(self, query, top_k=100):
-        terms = tokenize(query)
+        terms = self.helper.tokenize(query)
         if not terms:
             return []
 
-        scored_docs,palmer_score = self._get_ranked_documents(terms, top_k)
+        scored_docs,palmer_score = self._get_ranked_documents(terms)
         return self._build_results(scored_docs, query,palmer_score)
 
     # BACKUP
@@ -116,8 +119,8 @@ class SearchEngine:
             return rows, contains_boris_palmer
     # BACKUP
 
-    def _get_ranked_documents(self, terms, top_k):
-        ranked_docs, palmer_flag = retrieve(terms, self.db_path, top_k)
+    def _get_ranked_documents(self, terms):
+        ranked_docs, palmer_flag = self.ranker.retrieve(terms)
         return ranked_docs, palmer_flag
 
     def _build_results(self, ranked_docs, query,palmer_score):
@@ -154,3 +157,15 @@ class SearchEngine:
                 return snippet.strip()[:max_chars] + "..."
 
         return text[:max_chars] + "..."  # fallback
+
+
+
+class HelperFunction():
+    
+    def tokenize(self,text):
+        stopwords = set([
+        "the", "and", "is", "of", "in", "to", "with", "that", "as", "for", "on",
+        "was", "are", "by", "this", "from", "be", "or", "an", "it"
+        ])
+        tokens = re.findall(r'\b[a-zA-Z]{2,}\b', text.lower())
+        return [t for t in tokens if t not in stopwords]

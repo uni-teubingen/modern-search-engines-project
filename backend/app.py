@@ -17,9 +17,15 @@ def search():
 
 @app.route("/api/start-crawling", methods=["GET","POST"])
 def start_crawling():
+    database = db.Database(db.DB_PATH)
+    database.drop_all()
     crl = crawler.Crawler()
     thread = threading.Thread(target=crl.start)
     thread.start()
     return jsonify({"status": "Crawling started"}), 202
+
+@app.route("/api/health-check",methods=["GET"])
+def health_check():
+    return "",200
 
 
