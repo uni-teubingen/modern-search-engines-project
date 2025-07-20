@@ -1,4 +1,3 @@
-var boris_score;
 /**
  * Holt einen Query-Parameter aus der URL (?name=...)
  * @param {string} name - Der Parametername
@@ -37,8 +36,13 @@ function renderResults(data) {
   data.forEach(result => {
     const el = createResultElement(result);
     container.appendChild(el);
-    boris_score = boris_score || result.palmer_score;
   });
+
+  window.dispatchEvent(
+    new CustomEvent("searchResultsLoaded", { detail: data })
+  );
+
+  
 }
 
 /**
@@ -119,12 +123,19 @@ function createSpeechBubble(){
  */
 function determineStateOfHappiness(emotion){
   const wrapper = document.getElementById('assistantWrapper');
+  const lower_jaw = document.createElement('img');
+  lower_jaw.id = 'assistantImgLower';
+  lower_jaw.className = 'assistant-img-lower';
+  lower_jaw.alt ='Palmer-AI-Assistant';
+  lower_jaw.width='200px';
+  lower_jaw.src = `assets/img/assistant_lower.png`;
   const upper_jaw = document.createElement('img');
   upper_jaw.id = 'assistantImgUpper';
   upper_jaw.className = 'assistant-img animate';
   upper_jaw.alt ='Palmer-AI-Assistant';
   upper_jaw.width='200px';
   upper_jaw.src = `assets/img/assistant_upper_${emotion}.png`;
+  wrapper.appendChild(lower_jaw);
   wrapper.appendChild(upper_jaw);
 }
 
@@ -146,7 +157,7 @@ function commentSearchQuery(){
     const bubble = document.getElementById('speechBubble');
     bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${new_query}><i>${print_query}</i></a>?`
   }
-  else if (!boris_score) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
+  else if (!window.hasPalmerScore) { // TODO: Hier muss gecheckt werden / die Condition replaced werden
     determineStateOfHappiness('sad');
     createSpeechBubble();
     const bubble = document.getElementById('speechBubble');
@@ -164,15 +175,25 @@ function commentSearchQuery(){
  * Initialisiere den Palmer-AI-Assistant
  */
 function initAssistant(){
-  commentSearchQuery();
-  animateAssistant();
-  playRandomSound();
+  window.addEventListener(
+    "searchResultsLoaded",
+    (e) => {
+      const data = e.detail;
+
+      // OR über alle palmer_score-Felder
+      window.hasPalmerScore = data.some(item => item.palmer_score === true);
+
+      commentSearchQuery();
+      animateAssistant();
+      playRandomSound();      // jetzt stehen alle Infos bereit
+    },
+    { once: true }                 // nur einmal reagieren
+  );
 }
 
 
 // Seite initialisieren
 window.addEventListener("DOMContentLoaded", () => {
-  boris_score = false;
   initSearchPage();
   initSearchFormHandler();
   initAssistant();
