@@ -50,6 +50,11 @@ class Database:
                     FOREIGN KEY (doc_id) REFERENCES pages(id)
                 );
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS status (
+                    status INTEGER
+                );
+            """)
             print("[✅] Datenbank initialisiert:", self.db_path)
     
     def has_entries(self):
@@ -160,6 +165,7 @@ class TfTable:
 class StatusTable:
     def __init__(self, db: Database):
         self.db = db
+    
     def get_status(self):
         with self.db.connect() as conn:
             cursor = conn.cursor()
