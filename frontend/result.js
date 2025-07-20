@@ -1,3 +1,4 @@
+var boris_score;
 /**
  * Holt einen Query-Parameter aus der URL (?name=...)
  * @param {string} name - Der Parametername
@@ -36,6 +37,7 @@ function renderResults(data) {
   data.forEach(result => {
     const el = createResultElement(result);
     container.appendChild(el);
+    boris_score = boris_score || result.palmer_score;
   });
 }
 
@@ -144,7 +146,7 @@ function commentSearchQuery(){
     const bubble = document.getElementById('speechBubble');
     bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${new_query}><i>${print_query}</i></a>?`
   }
-  else if (true) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
+  else if (!boris_score) { // Placeholder (Soll aktivieren wenn Ergebnisse nichts mit Palmer zu tun haben)
     determineStateOfHappiness('sad');
     createSpeechBubble();
     const bubble = document.getElementById('speechBubble');
@@ -170,6 +172,7 @@ function initAssistant(){
 
 // Seite initialisieren
 window.addEventListener("DOMContentLoaded", () => {
+  boris_score = false;
   initSearchPage();
   initSearchFormHandler();
   initAssistant();
