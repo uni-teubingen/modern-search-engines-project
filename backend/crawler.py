@@ -11,7 +11,7 @@ from db import DB_PATH, SEED_URLS
 
 
 class Crawler:
-    def __init__(self, allowed_domains = {"tuebingen", "tubingen", "tübingen"}, max_pages=2000, threads=10, delay=0.5):
+    def __init__(self, allowed_domains = {"tuebingen", "tubingen", "tübingen"}, max_pages=2000, threads=8, delay=0.5):
         self.allowed_domains = allowed_domains
         self.max_pages = max_pages
         self.user_agent = "TüBingCrawler/1.0"
@@ -37,6 +37,18 @@ class Crawler:
         clean_url = parsed._replace(query="", fragment="").geturl()
         clean_url = clean_url.replace("//", "/") if "://" not in clean_url else clean_url
         return clean_url.rstrip('/')
+    
+    def _content_exists(self, content):
+        try:
+            with sqlite3.connect(DB_PATH) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT 1 FROM pages WHERE content = ? LIMIT 1
+                """, (content,))
+                return cursor.fetchone() is not None
+        except sqlite3.Error as e:
+            #print(f"[DB Error]: {e}")
+            return False
 
     def _is_allowed_by_robots(self, url):
         parsed = urlparse(url)
@@ -124,6 +136,12 @@ class Crawler:
 
             title = soup.title.string.strip() if soup.title else ""
             content = text.strip()
+
+            if self._content_exists(content):
+                with self.url_lock:
+                    self.seen_urls.add(normalized_url_without_http)
+                return
+        
             self._save_page(normalized_url_without_http, title, content)
 
             with self.url_lock:
