@@ -24,7 +24,6 @@ async function handleSearch(event) {
   }
 }
 
-// Beim Laden Eventlistener registrieren
 window.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("searchForm");
   if (form) {

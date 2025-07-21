@@ -45,17 +45,12 @@ function renderResults(data) {
   
 }
 
-/**
- * Führt die Suche aus und zeigt Ergebnisse
- */
 function initSearchPage() {
   const query = getQueryParam("q");
 
-  // Setzt den Suchbegriff in die Eingabe
   const input = document.getElementById("searchBox");
   if (input) input.value = query;
 
-  // Ruft API auf
   if (query.trim()) {
     fetch(`http://localhost:5050/api/search?q=${encodeURIComponent(query)}`)
       .then(res => res.json())
@@ -67,9 +62,6 @@ function initSearchPage() {
   }
 }
 
-/**
- * Reagiert auf neue Suche im Suchformular
- */
 function initSearchFormHandler() {
   const form = document.getElementById("searchForm");
   if (form) {
@@ -79,18 +71,12 @@ function initSearchFormHandler() {
       const newQuery = input.value.trim();
 
       if (newQuery) {
-        // Starte neue Suche mit page=1
         window.location.href = `result.html?q=${encodeURIComponent(newQuery)}&page=1`;
       }
     });
   }
 }
 
-// Palmer-AI-Assistant:
-
-/**
- * Fügt Animation zu Assisten hinzu
- */
 function animateAssistant() {
   const img = document.getElementById("assistantImg");
   if (img) {
@@ -98,18 +84,13 @@ function animateAssistant() {
   }
 }
 
-/**
- * Spielt zufällig einen Spruch ab (Vorab muss Autoplay im Browser aktiviert werden)
- */
 
 function playRandomSound(){
   const random = Math.floor(Math.random() * 5) + 1;
   const audio = new Audio(`/assets/audio/${random}.mp3`);
   audio.play().catch(err => console.warn("Autoplay disabled:", err));
 }
-/**
- * Erstellt eine Sprechblase
- */
+
 function createSpeechBubble(){
   const wrapper = document.getElementById('assistantWrapper');
   const bubble = document.createElement('div');
@@ -118,9 +99,7 @@ function createSpeechBubble(){
   wrapper.appendChild(bubble); 
 }
 
-/**
- * Bestimmt die passende Stimmung von Palmer
- */
+
 function determineStateOfHappiness(emotion){
   const wrapper = document.getElementById('assistantWrapper');
   const lower_jaw = document.createElement('img');
@@ -139,9 +118,6 @@ function determineStateOfHappiness(emotion){
   wrapper.appendChild(upper_jaw);
 }
 
-/**
- * Kommentiert die Suche & Initialisiert die Stimmung
- */
 function commentSearchQuery(){
   const query = getQueryParam("q");
   const query_lower = query.toLowerCase();
@@ -157,7 +133,7 @@ function commentSearchQuery(){
     const bubble = document.getElementById('speechBubble');
     bubble.innerHTML = `Did you mean: <a href=http://localhost:8080/result.html?q=${new_query}><i>${print_query}</i></a>?`
   }
-  else if (!window.hasPalmerScore) { // TODO: Hier muss gecheckt werden / die Condition replaced werden
+  else if (!window.hasPalmerScore) {
     determineStateOfHappiness('sad');
     createSpeechBubble();
     const bubble = document.getElementById('speechBubble');
@@ -171,28 +147,23 @@ function commentSearchQuery(){
 }
 
 
-/**
- * Initialisiere den Palmer-AI-Assistant
- */
 function initAssistant(){
   window.addEventListener(
     "searchResultsLoaded",
     (e) => {
       const data = e.detail;
 
-      // OR über alle palmer_score-Felder
       window.hasPalmerScore = data.some(item => item.palmer_score === true);
 
       commentSearchQuery();
       animateAssistant();
-      playRandomSound();      // jetzt stehen alle Infos bereit
+      playRandomSound();     
     },
-    { once: true }                 // nur einmal reagieren
+    { once: true }                 
   );
 }
 
 
-// Seite initialisieren
 window.addEventListener("DOMContentLoaded", () => {
   initSearchPage();
   initSearchFormHandler();
