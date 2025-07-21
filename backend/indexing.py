@@ -91,7 +91,7 @@ class SearchEngine:
 
         scored_docs,palmer_score = self._get_ranked_documents(terms)
         results = self._build_results(scored_docs, query,palmer_score)
-        self.helper.performance_report(results)
+        #self.helper.performance_report(results)
         return results
 
     def _get_ranked_documents(self, terms):

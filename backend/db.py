@@ -107,7 +107,7 @@ class PageTable:
             cursor = conn.cursor()
             cursor.execute("SELECT title, url FROM pages WHERE id = ?", (doc_id,))
             return cursor.fetchone()
-        x   
+           
     def print_all(self):
         with self.db.connect() as conn:
             conn.row_factory = sqlite3.Row
@@ -121,6 +121,11 @@ class PageTable:
                 print(f"[id={row['id']}] URL={row['url']} | Titel={row['title']}")
                 print(f"Inhalt: {row['content'][:200]}...\nZeitpunkt: {row['crawled_at']}")
                 print("-" * 50)
+    def reset(self):
+        with self.db.connect() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM pages")
+            conn.commit()
 
 class TfTable:
     def __init__(self, db: Database):
