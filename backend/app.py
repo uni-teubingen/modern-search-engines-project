@@ -36,7 +36,7 @@ def performance_report():
 
 
 @app.route("/api/start-indexing", methods=["GET","POST"])
-def start_crawling():
+def start_indexing():
     database = db.Database(db.DB_PATH)
     tf_table = db.TfTable(database)
     tf_table.reset()
