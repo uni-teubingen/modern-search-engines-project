@@ -15,7 +15,7 @@ import db
 import math
 import sqlite3
 from collections import defaultdict
-import db  # angenommen, dein Modul heißt so
+import db
 
 class Ranker:
     def __init__(self, index_path=db.DB_PATH, k=100, lambda_=0.5, alpha=0.5):
