@@ -1,4 +1,4 @@
-How to Start the application via Docker
+How to Start the Application via Docker
 
 1. Download Docker
 2. Clone Repository
