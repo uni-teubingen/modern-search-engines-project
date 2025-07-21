@@ -2,6 +2,6 @@
 __pycache__/
 *.py[cod]
 *.pyo
-*.db
+#*.db
 *.venv
 performance_results.txt

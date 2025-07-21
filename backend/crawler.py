@@ -78,7 +78,7 @@ class Crawler:
         if len(words) < 20:
             return False
         matches = sum(1 for word in words if word in english_words)
-        return matches / len(words) > 0.05
+        return matches / len(words) > 0.10
 
     def _already_crawled(self, url):
         with self.url_lock:
