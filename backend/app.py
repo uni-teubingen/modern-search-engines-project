@@ -32,7 +32,7 @@ def health_check():
 def performance_report():
     indexer = indexing.SearchEngine(db.DB_PATH)
     query= request.args.get("q", "")
-    indexer.helper.performance_report(query)
+    indexer.search(query,True)
 
 
 @app.route("/api/start-indexing", methods=["GET","POST"])

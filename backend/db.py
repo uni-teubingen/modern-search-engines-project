@@ -158,14 +158,22 @@ class TfTable:
             for row in rows:
                 print(f"[doc_id={row['doc_id']}] term='{row['term']}' | tf={row['tf']:.4f} | idf={row['idf']:.4f} | tfidf={row['tfidf']:.4f}")
 
-    def get_total_tfidf_score(self, doc_id: int) -> float:
+    def get_all_total_scores(self, query_terms):
+        if not query_terms:
+            return {}
+
+        placeholders = ','.join(['?'] * len(query_terms))  # (?, ?, ?, ...)
         with self.db.connect() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT SUM(tfidf) FROM tfs WHERE doc_id = ?
-            """, (doc_id,))
-            result = cursor.fetchone()
-            return result[0] if result[0] is not None else 0.0
+            cursor.execute(f"""
+                SELECT doc_id, SUM(tfidf) as total
+                FROM tfs
+                WHERE term IN ({placeholders})
+                GROUP BY doc_id
+            """, query_terms)
+            rows = cursor.fetchall()
+            return {doc_id: total if total is not None else 0.0 for doc_id, total in rows}
+
         
 class StatusTable:
     def __init__(self, db: Database):

@@ -84,31 +84,49 @@ class SearchEngine:
         self.ranker = Ranker()
         self.tf = db.TfTable(self.db)
 
-    def search(self, query):
+    def search(self, query,performance_report = True):
         terms = self.helper.tokenize(query)
         if not terms:
             return []
 
         scored_docs,palmer_score = self._get_ranked_documents(terms)
-        results = self._build_results(scored_docs, query,palmer_score)
-        #self.helper.performance_report(results)
+        results = self._build_results(scored_docs, query,palmer_score,performance_report,terms)
+        if(performance_report):
+            self.helper.performance_report(results)
         return results
 
     def _get_ranked_documents(self, terms):
         ranked_docs, palmer_flag = self.ranker.retrieve(terms)
         return ranked_docs, palmer_flag
 
-    def _build_results(self, ranked_docs, query,palmer_score):
+    def _build_results(self, ranked_docs, query, palmer_score, performance_report,query_terms):
         results = []
+
+        if performance_report:
+            all_scores = self.tf.get_all_total_scores(query_terms)
+        else:
+            all_scores = {}
+
         for row in ranked_docs:
             doc_id = row["doc_id"]
             meta = self.pages.get_metadata(doc_id)
             content = self.pages.get_content(doc_id)
             snippet = self._extract_snippet_from_html(content, query)
-            score = self.tf.get_total_tfidf_score(doc_id)
-            result_dto = ResultDto(doc_id,meta["title"] if meta else "",meta["url"] if meta else "",palmer_score,snippet,score)
+
+            score = all_scores.get(doc_id, 0.0) if performance_report else 0.0
+
+            result_dto = ResultDto(
+                doc_id=doc_id,
+                title=meta["title"] if meta else "",
+                url=meta["url"] if meta else "",
+                palmer_score=palmer_score,
+                snippet=snippet,
+                score=score
+            )
             results.append(result_dto)
+
         return results
+
     
     def _extract_snippet_from_html(self, html: str, query: str, max_chars=250):
         try:
