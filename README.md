@@ -1,3 +1,6 @@
-How to start the application: Go into the root folder where the docker-compose.yml file is located. Open a Terminal in this folder and execute the command -> docker compose up --build -d
+How to Start the application via Docker
 
-To undo the containers use command: docker compose down
+1. Download Docker
+2. Clone Repository
+3. Go into root Folder where them docker-compose.yml file is located and execute command: docker compose ip --build -d
+4. If you want to decompose use docker compose down
